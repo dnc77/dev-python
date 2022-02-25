@@ -3,7 +3,7 @@ PS4 DB Rebuilder for firmware v9.00.
 Hi Guys!
 
 Just a quick update to the DB Rebuilder for PS4 Jailbreak.
-This update is for version 9.00.
+This update is for version 9.00 and connects to port 2121.
 
 Full credit goes to Zer0xFF for creating this script in the
 first place. I really needed to find something and this is the
