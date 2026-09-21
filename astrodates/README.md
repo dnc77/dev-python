@@ -7,9 +7,14 @@ There are various real-world applications for this purpose which is beyond scope
 
 On a particular start date and location, along the 360° of the zodiac, the objective of the application is to calculate the date and time when a body moves in increments of a degree increment until a particular current date is reached. The degree increment must be a multiplicative factor of 360. This is important because the application first measures whole revolutions to a closer date to the current date for performance reasons.
 
-***Please note:***
-While this application has been written mostly with the help of `LLM's` and `AI` coding assistances, some sensitive areas have been scrutinized and had to be rewritten carefully.
-Albeit, this product is considered to be a **prototype**. Some initial tests have been conducted but it is subject to more intense testing.
+***IMPORTANT NOTE/DISCLAIMER:***
+
+This application has been written mostly with the help of `LLM's` and `AI` coding assistance.
+Some critical areas have been scrutinized and needed to be rewritten.
+The application was tested to standard working level and therefore is considered to still be a **prototype**.
+In case of any difficulties, please do not hesitate to reach out!
+
+All work is provided ​“AS IS”. We make no other warranties, express or implied, and hereby disclaim all implied warranties, including any warranty of merchantability and warranty of fitness for a particular purpose.
 
 ## 2. Getting the application to run
 
