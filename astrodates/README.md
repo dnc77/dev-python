@@ -9,7 +9,7 @@ On a particular start date and location, along the 360° of the zodiac, the obje
 
 ***IMPORTANT NOTE:***
 
-While this application has been written mostly with the help of `LLM's` and `AI` coding assistances, some sensitive areas have been scrutinized and had to be rewritten carefully.
+While this application has been written mostly with the help of `LLM's` and `AI` coding assistance, some sensitive areas have been scrutinized and had to be rewritten carefully.
 Albeit, this product is considered to be a **prototype**. Some initial tests have been conducted but it is subject to more intense testing.
 
 ## 2. Getting the application to run
