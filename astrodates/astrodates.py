@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
@@ -1010,8 +1011,17 @@ class SolarProgressionApp:
       )
       image_frame.grid_propagate(False)
 
+      if getattr(sys, "frozen", False):
+         application_dir = os.path.dirname(
+            os.path.abspath(sys.executable)
+         )
+      else:
+         application_dir = os.path.dirname(
+            os.path.abspath(__file__)
+         )
+
       image_path = os.path.join(
-         os.path.dirname(os.path.abspath(__file__)),
+         application_dir,
          "astrodates.png"
       )
 
