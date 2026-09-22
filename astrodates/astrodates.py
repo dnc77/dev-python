@@ -1,3 +1,4 @@
+import os
 import json
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
@@ -10,9 +11,10 @@ from timezone_api import (
    COMMON_TIMEZONES,
    local_to_utc,
    utc_to_local,
-   timezone_coordinates,
+   timezone_coordinates
 )
 
+VERSION: str = "1.00.0002a (github edition - prototype)"
 FLAGS = swe.FLG_SWIEPH | swe.FLG_SPEED
 
 #
@@ -28,7 +30,7 @@ BODY_OPTIONS = {
 
 BODY_IDS = {
    "Sun": swe.SUN,
-   "Moon": swe.MOON,
+   "Moon": swe.MOON
 }
 
 #
@@ -58,7 +60,7 @@ ZODIAC_SIGNS = (
    "Sagittarius",
    "Capricorn",
    "Aquarius",
-   "Pisces",
+   "Pisces"
 )
 
 
@@ -67,6 +69,7 @@ ZODIAC_SIGNS = (
 # Swiss Ephemeris calculations are performed using UTC.
 #
 
+# Convert a naive UTC datetime to a Julian day.
 def julian_day(dt):
    """Convert a naive UTC datetime to a Julian day."""
    decimal_hour = (
@@ -81,7 +84,7 @@ def julian_day(dt):
       dt.month,
       dt.day,
       decimal_hour,
-      swe.GREG_CAL,
+      swe.GREG_CAL
    )
 
 
@@ -91,12 +94,13 @@ def julian_day(dt):
 # ASC and MC use Swiss Ephemeris house calculations.
 #
 
+# Calculate the zodiac longitude for a body or angular point.
 def body_longitude(jd, body_name, tz_name):
    if body_name in BODY_IDS:
       result = swe.calc_ut(
          jd,
          BODY_IDS[body_name],
-         FLAGS,
+         FLAGS
       )
       return result[0][0] % 360.0
 
@@ -106,7 +110,7 @@ def body_longitude(jd, body_name, tz_name):
       jd,
       latitude,
       longitude,
-      b"P",
+      b"P"
    )
 
    ascmc = houses[1]
@@ -130,6 +134,7 @@ def body_longitude(jd, body_name, tz_name):
 # Return the forward angle from one longitude to another.
 #
 
+# Return the forward angular distance between two longitudes.
 def forward_angle(a, b):
    return (b - a) % 360.0
 
@@ -139,11 +144,9 @@ def forward_angle(a, b):
 # Accumulate the actual ephemeris motion without losing 0-degree crossings.
 #
 
+# Calculate accumulated body progression between two Julian dates.
 def body_progression(
-   origin_jd,
-   current_jd,
-   body_name,
-   tz_name,
+   origin_jd, current_jd, body_name, tz_name
 ):
    span = current_jd - origin_jd
 
@@ -156,7 +159,7 @@ def body_progression(
    previous = body_longitude(
       origin_jd,
       body_name,
-      tz_name,
+      tz_name
    )
    total = 0.0
 
@@ -166,12 +169,12 @@ def body_progression(
       current = body_longitude(
          jd,
          body_name,
-         tz_name,
+         tz_name
       )
 
       total += forward_angle(
          previous,
-         current,
+         current
       )
 
       previous = current
@@ -184,6 +187,7 @@ def body_progression(
 # Uses TargetDateFinder to find the next target date.
 #
 
+# Find the next alignment for the requested longitudinal increment.
 def find_next_alignment(
    parent: tk.Misc, origin_jd: float, current_jd: float,
    degree_multiple: float, body_name: str, tz_name: str
@@ -197,7 +201,7 @@ def find_next_alignment(
       current_jd=current_jd,
       inc_longitude=degree_multiple,
       body_name=body_name,
-      tz_name=tz_name,
+      tz_name=tz_name
    )
 
    alignment_jd = finder.find_target_date()
@@ -208,7 +212,7 @@ def find_next_alignment(
    return (
       alignment_jd,
       target_progress,
-      target_longitude,
+      target_longitude
    )
 
 
@@ -217,6 +221,7 @@ def find_next_alignment(
 # A blank time means 00:00 in the selected timezone.
 #
 
+# Parse local date/time input and convert it to UTC.
 def parse_local_datetime(date_text, time_text, tz_name):
    if not date_text:
       raise ValueError("Please select a date.")
@@ -224,7 +229,7 @@ def parse_local_datetime(date_text, time_text, tz_name):
    try:
       local_date = datetime.strptime(
          date_text,
-         "%Y-%m-%d",
+         "%Y-%m-%d"
       ).date()
    except ValueError:
       raise ValueError(
@@ -238,7 +243,7 @@ def parse_local_datetime(date_text, time_text, tz_name):
       try:
          local_time = datetime.strptime(
             time_text.strip(),
-            "%H:%M",
+            "%H:%M"
          ).time()
       except ValueError:
          raise ValueError(
@@ -247,12 +252,12 @@ def parse_local_datetime(date_text, time_text, tz_name):
 
    local_dt = datetime.combine(
       local_date,
-      local_time,
+      local_time
    )
 
    return local_dt, local_to_utc(
       local_dt,
-      tz_name,
+      tz_name
    )
 
 
@@ -260,14 +265,17 @@ def parse_local_datetime(date_text, time_text, tz_name):
 # Formatting helpers.
 #
 
+# Format a datetime for display.
 def format_datetime(dt):
    return dt.strftime("%Y-%m-%d %H:%M")
 
 
+# Format a decimal longitude as degrees.
 def format_degrees(value):
    return f"{value:.4f}°"
 
 
+# Format a longitude as degrees, zodiac sign, minutes and seconds.
 def format_zodiac_position(value):
    value %= 360.0
 
@@ -307,14 +315,9 @@ class TargetDateFinder:
 
    # Default constructor.
    def __init__(
-      self,
-      parent: tk.Misc,
-      start_jd: float,
-      start_longitude: float,
-      current_jd: float,
-      inc_longitude: float,
-      body_name: str,
-      tz_name: str,
+      self, parent: tk.Misc, start_jd: float,
+      start_longitude: float, current_jd: float,
+      inc_longitude: float, body_name: str, tz_name: str
    ) -> None:
       # UI.
       self.parent: tk.Misc = parent
@@ -355,19 +358,19 @@ class TargetDateFinder:
       self.log_text = tk.Text(
          self.log_window,
          state=tk.DISABLED,
-         wrap=tk.WORD,
+         wrap=tk.WORD
       )
       self.log_text.pack(
          fill=tk.BOTH,
          expand=True,
          padx=10,
-         pady=10,
+         pady=10
       )
 
       close_button = tk.Button(
          self.log_window,
          text="Close",
-         command=self._close_log,
+         command=self._close_log
       )
       close_button.pack(pady=(0, 10))
 
@@ -534,7 +537,7 @@ class TargetDateFinder:
          # Find the date corresponding to the new accumulated longitude.
          self.running_jd = self._find_next_revolution(
             self.running_jd,
-            self.start_longitude,
+            self.start_longitude
          )
 
          self.log(
@@ -574,7 +577,7 @@ class TargetDateFinder:
       return self._binary_search_longitude(
          lower_jd,
          upper_jd,
-         offset_longitude,
+         offset_longitude
       )
 
    #
@@ -629,12 +632,12 @@ class SolarProgressionApp:
    def build_ui(self):
       main = ttk.Frame(
          self.root,
-         padding=12,
+         padding=12
       )
       main.grid(
          row=0,
          column=0,
-         sticky="nsew",
+         sticky="nsew"
       )
 
       #
@@ -644,25 +647,25 @@ class SolarProgressionApp:
       date_frame = ttk.LabelFrame(
          main,
          text="Date and Time",
-         padding=10,
+         padding=10
       )
       date_frame.grid(
          row=0,
          column=0,
          padx=4,
          pady=4,
-         sticky="ew",
+         sticky="ew"
       )
 
       ttk.Label(
          date_frame,
-         text="Start Date:",
+         text="Start Date:"
       ).grid(
          row=0,
          column=0,
          padx=4,
          pady=4,
-         sticky="w",
+         sticky="w"
       )
 
       self.start_date_var = tk.StringVar()
@@ -671,25 +674,25 @@ class SolarProgressionApp:
          date_frame,
          textvariable=self.start_date_var,
          date_pattern="yyyy-mm-dd",
-         width=13,
+         width=13
       )
       self.start_date.grid(
          row=0,
          column=1,
          padx=4,
-         pady=4,
+         pady=4
       )
       self.start_date_var.set("")
 
       ttk.Label(
          date_frame,
-         text="Start Time:",
+         text="Start Time:"
       ).grid(
          row=0,
          column=2,
          padx=4,
          pady=4,
-         sticky="w",
+         sticky="w"
       )
 
       self.start_time_var = tk.StringVar()
@@ -697,23 +700,23 @@ class SolarProgressionApp:
       ttk.Entry(
          date_frame,
          textvariable=self.start_time_var,
-         width=8,
+         width=8
       ).grid(
          row=0,
          column=3,
          padx=4,
-         pady=4,
+         pady=4
       )
 
       ttk.Label(
          date_frame,
-         text="Current Date:",
+         text="Current Date:"
       ).grid(
          row=1,
          column=0,
          padx=4,
          pady=4,
-         sticky="w",
+         sticky="w"
       )
 
       self.current_date_var = tk.StringVar()
@@ -722,25 +725,25 @@ class SolarProgressionApp:
          date_frame,
          textvariable=self.current_date_var,
          date_pattern="yyyy-mm-dd",
-         width=13,
+         width=13
       )
       self.current_date.grid(
          row=1,
          column=1,
          padx=4,
-         pady=4,
+         pady=4
       )
       self.current_date_var.set("")
 
       ttk.Label(
          date_frame,
-         text="Current Time:",
+         text="Current Time:"
       ).grid(
          row=1,
          column=2,
          padx=4,
          pady=4,
-         sticky="w",
+         sticky="w"
       )
 
       self.current_time_var = tk.StringVar()
@@ -748,23 +751,23 @@ class SolarProgressionApp:
       ttk.Entry(
          date_frame,
          textvariable=self.current_time_var,
-         width=8,
+         width=8
       ).grid(
          row=1,
          column=3,
          padx=4,
-         pady=4,
+         pady=4
       )
 
       ttk.Label(
          date_frame,
-         text="Timezone:",
+         text="Timezone:"
       ).grid(
          row=2,
          column=0,
          padx=4,
          pady=4,
-         sticky="w",
+         sticky="w"
       )
 
       zone_values = list(COMMON_TIMEZONES)
@@ -778,7 +781,7 @@ class SolarProgressionApp:
          textvariable=self.timezone_var,
          values=zone_values,
          width=34,
-         state="normal",
+         state="normal"
       )
       self.timezone_box.grid(
          row=2,
@@ -786,7 +789,7 @@ class SolarProgressionApp:
          columnspan=3,
          padx=4,
          pady=4,
-         sticky="ew",
+         sticky="ew"
       )
 
       #
@@ -795,13 +798,13 @@ class SolarProgressionApp:
 
       ttk.Label(
          date_frame,
-         text="Zodiac Body/Point:",
+         text="Zodiac Body/Point:"
       ).grid(
          row=3,
          column=0,
          padx=4,
          pady=4,
-         sticky="w",
+         sticky="w"
       )
 
       self.body_var = tk.StringVar(
@@ -813,7 +816,7 @@ class SolarProgressionApp:
          textvariable=self.body_var,
          values=list(BODY_OPTIONS.keys()),
          width=34,
-         state="readonly",
+         state="readonly"
       )
       self.body_box.grid(
          row=3,
@@ -821,7 +824,7 @@ class SolarProgressionApp:
          columnspan=3,
          padx=4,
          pady=4,
-         sticky="ew",
+         sticky="ew"
       )
 
       #
@@ -831,25 +834,25 @@ class SolarProgressionApp:
       degree_frame = ttk.LabelFrame(
          main,
          text="Next Zodiac Increment by Degrees",
-         padding=10,
+         padding=10
       )
       degree_frame.grid(
          row=1,
          column=0,
          padx=4,
          pady=4,
-         sticky="ew",
+         sticky="ew"
       )
 
       ttk.Label(
          degree_frame,
-         text="Degree Increment:",
+         text="Degree Increment:"
       ).grid(
          row=0,
          column=0,
          padx=4,
          pady=4,
-         sticky="w",
+         sticky="w"
       )
 
       self.degree_var = tk.StringVar()
@@ -857,40 +860,40 @@ class SolarProgressionApp:
       ttk.Entry(
          degree_frame,
          textvariable=self.degree_var,
-         width=10,
+         width=10
       ).grid(
          row=0,
          column=1,
          padx=4,
-         pady=4,
+         pady=4
       )
 
       ttk.Button(
          degree_frame,
          text="Add",
-         command=self.add_degree,
+         command=self.add_degree
       ).grid(
          row=0,
          column=2,
          padx=4,
-         pady=4,
+         pady=4
       )
 
       ttk.Button(
          degree_frame,
          text="Remove",
-         command=self.remove_degree,
+         command=self.remove_degree
       ).grid(
          row=0,
          column=3,
          padx=4,
-         pady=4,
+         pady=4
       )
 
       self.degree_list = tk.Listbox(
          degree_frame,
          height=5,
-         width=30,
+         width=30
       )
       self.degree_list.grid(
          row=1,
@@ -898,7 +901,7 @@ class SolarProgressionApp:
          columnspan=4,
          padx=4,
          pady=4,
-         sticky="ew",
+         sticky="ew"
       )
 
       #
@@ -911,53 +914,207 @@ class SolarProgressionApp:
          column=0,
          padx=4,
          pady=8,
-         sticky="ew",
+         sticky="ew"
       )
 
       ttk.Button(
          button_frame,
          text="Calculate",
-         command=self.calculate,
+         command=self.calculate
       ).grid(
          row=0,
          column=0,
-         padx=4,
+         padx=4
       )
 
       ttk.Button(
          button_frame,
          text="Clear",
-         command=self.clear,
+         command=self.clear
       ).grid(
          row=0,
          column=1,
-         padx=4,
+         padx=4
       )
 
       button_frame.columnconfigure(
          2,
-         weight=1,
+         weight=1
       )
 
       ttk.Button(
          button_frame,
          text="Load",
-         command=self.load_state,
+         command=self.load_state
       ).grid(
          row=0,
          column=3,
-         padx=4,
+         padx=4
       )
 
       ttk.Button(
          button_frame,
          text="Save",
-         command=self.save_state,
+         command=self.save_state
       ).grid(
          row=0,
          column=4,
-         padx=(4, 0),
+         padx=4
       )
+
+      ttk.Button(
+         button_frame,
+         text="?",
+         width=3,
+         command=self.show_about
+      ).grid(
+         row=0,
+         column=5,
+         padx=(4, 0)
+      )
+
+   #
+   # About window.
+   #
+
+   # Display the application information.
+   def show_about(self) -> None:
+      window = tk.Toplevel(self.root)
+      window.title("About astrodates")
+      window.resizable(False, False)
+      window.transient(self.root)
+
+      content = ttk.Frame(
+         window,
+         padding=12
+      )
+      content.grid(
+         row=0,
+         column=0,
+         sticky="nsew"
+      )
+
+      image_frame = tk.Frame(
+         content,
+         width=128,
+         height=128,
+         borderwidth=0,
+         highlightthickness=0,
+         bg=window.cget("background")
+      )
+      image_frame.grid(
+         row=0,
+         column=0,
+         padx=(0, 12),
+         sticky="n"
+      )
+      image_frame.grid_propagate(False)
+
+      image_path = os.path.join(
+         os.path.dirname(os.path.abspath(__file__)),
+         "astrodates.png"
+      )
+
+      try:
+         about_image = tk.PhotoImage(
+            file=image_path
+         )
+      except tk.TclError:
+         about_image = None
+
+      if about_image is not None:
+         image_label = tk.Label(
+            image_frame,
+            image=about_image,
+            borderwidth=0,
+            highlightthickness=0,
+            bg=window.cget("background")
+         )
+         image_label.image = about_image
+         image_label.pack()
+
+      text = tk.Text(
+         content,
+         width=70,
+         height=13,
+         wrap=tk.WORD,
+         relief=tk.FLAT,
+         borderwidth=0,
+         highlightthickness=0,
+         bg=window.cget("background")
+      )
+      text.grid(
+         row=0,
+         column=1,
+         sticky="nw"
+      )
+
+      text.tag_configure(
+         "heading",
+         font=("TkDefaultFont", 16, "bold")
+      )
+      text.tag_configure(
+         "bold",
+         font=("TkDefaultFont", 10, "bold")
+      )
+      text.tag_configure(
+         "link",
+         underline=True,
+         font=("TkFixedFont", 10)
+      )
+
+      text.insert(
+         tk.END,
+         "astrodates\n\n",
+         "heading"
+      )
+      text.insert(
+         tk.END,
+         f"{VERSION}\n"
+         "Copyright Duncan Camilleri 2026\n",
+         "bold"
+      )
+      text.insert(
+         tk.END,
+         "https://github.com/dnc77\n\n",
+         "link"
+      )
+      text.insert(
+         tk.END,
+         "astrodates is a small application that finds when certain "
+         "planetary bodies align at a certain degree along the zodiac. "
+         "It accepts a start date and degree increments that are factors "
+         "of 360 degrees. It finds the position of the planetary body "
+         "at that start date and for every degree value specified, it "
+         "starts incrementing by that degree amount until it reaches "
+         "or exceeds a current date. It then reports the date when the "
+         "planetary body will align with that position."
+      )
+
+      text.configure(
+         state=tk.DISABLED
+      )
+
+      ttk.Button(
+         content,
+         text="OK",
+         command=window.destroy
+      ).grid(
+         row=1,
+         column=0,
+         columnspan=2,
+         pady=(12, 0)
+      )
+
+      window.protocol(
+         "WM_DELETE_WINDOW",
+         window.destroy
+      )
+
+      window.update_idletasks()
+      window.lift()
+      window.focus_force()
+      window.grab_set()
 
    #
    # Add a degree increment.
@@ -972,7 +1129,7 @@ class SolarProgressionApp:
          messagebox.showerror(
             "Invalid Degree",
             "Enter a valid number of degrees.",
-            parent=self.root,
+            parent=self.root
          )
          return
 
@@ -981,7 +1138,7 @@ class SolarProgressionApp:
             "Invalid Degree",
             "Degree increment must be greater than 0 and "
             "no more than 360.",
-            parent=self.root,
+            parent=self.root
          )
          return
 
@@ -1015,13 +1172,13 @@ class SolarProgressionApp:
    def refresh_degree_list(self):
       self.degree_list.delete(
          0,
-         tk.END,
+         tk.END
       )
 
       for value in self.degree_values:
          self.degree_list.insert(
             tk.END,
-            format_degrees(value),
+            format_degrees(value)
          )
 
    #
@@ -1035,8 +1192,8 @@ class SolarProgressionApp:
          defaultextension=".asd",
          filetypes=[
             ("ASD files", "*.asd"),
-            ("All files", "*.*"),
-         ],
+            ("All files", "*.*")
+         ]
       )
 
       if not path:
@@ -1049,32 +1206,32 @@ class SolarProgressionApp:
          "current_time": self.current_time_var.get(),
          "timezone": self.timezone_var.get(),
          "body": self.body_var.get(),
-         "degrees": self.degree_values,
+         "degrees": self.degree_values
       }
 
       try:
          with open(
             path,
             "w",
-            encoding="utf-8",
+            encoding="utf-8"
          ) as file:
             json.dump(
                data,
                file,
-               indent=3,
+               indent=3
             )
 
          messagebox.showinfo(
             "Save Complete",
             f"Settings saved to:\n{path}",
-            parent=self.root,
+            parent=self.root
          )
 
       except (OSError, TypeError, ValueError) as error:
          messagebox.showerror(
             "Save Error",
             str(error),
-            parent=self.root,
+            parent=self.root
          )
 
    #
@@ -1087,8 +1244,8 @@ class SolarProgressionApp:
          title="Load Settings",
          filetypes=[
             ("ASD files", "*.asd"),
-            ("All files", "*.*"),
-         ],
+            ("All files", "*.*")
+         ]
       )
 
       if not path:
@@ -1098,7 +1255,7 @@ class SolarProgressionApp:
          with open(
             path,
             "r",
-            encoding="utf-8",
+            encoding="utf-8"
          ) as file:
             data = json.load(file)
 
@@ -1114,7 +1271,7 @@ class SolarProgressionApp:
          timezone_name = data.get("timezone", "UTC")
          body = data.get(
             "body",
-            "Sun — (360° = ~365.24 days)",
+            "Sun — (360° = ~365.24 days)"
          )
          degrees = data.get("degrees", [])
 
@@ -1161,24 +1318,25 @@ class SolarProgressionApp:
          messagebox.showinfo(
             "Load Complete",
             f"Settings loaded from:\n{path}",
-            parent=self.root,
+            parent=self.root
          )
 
       except (
          OSError,
          json.JSONDecodeError,
          TypeError,
-         ValueError,
+         ValueError
       ) as error:
          messagebox.showerror(
             "Load Error",
             str(error),
-            parent=self.root,
+            parent=self.root
          )
 
    #
    # Calculate results using the selected body or angular point.
    #
+   # Calculate the progression results.
    def calculate(self):
       try:
          timezone_name = self.timezone_var.get().strip()
@@ -1186,13 +1344,13 @@ class SolarProgressionApp:
          start_local, start_utc = parse_local_datetime(
             self.start_date_var.get().strip(),
             self.start_time_var.get(),
-            timezone_name,
+            timezone_name
          )
 
          current_local, current_utc = parse_local_datetime(
             self.current_date_var.get().strip(),
             self.current_time_var.get(),
-            timezone_name,
+            timezone_name
          )
 
          if current_utc < start_utc:
@@ -1216,20 +1374,20 @@ class SolarProgressionApp:
          origin_longitude = body_longitude(
             origin_jd,
             body_name,
-            timezone_name,
+            timezone_name
          )
 
          current_longitude = body_longitude(
             current_jd,
             body_name,
-            timezone_name,
+            timezone_name
          )
 
          current_progress = body_progression(
             origin_jd,
             current_jd,
             body_name,
-            timezone_name,
+            timezone_name
          )
 
          results = []
@@ -1245,7 +1403,8 @@ class SolarProgressionApp:
             alignment_utc = swe.revjul(alignment_jd, swe.GREG_CAL)
 
             alignment_dt = datetime(
-               int(alignment_utc[0]), int(alignment_utc[1]), int(alignment_utc[2]),
+               int(alignment_utc[0]), int(alignment_utc[1]),
+               int(alignment_utc[2])
             )
 
             day_fraction = alignment_utc[3]
@@ -1283,7 +1442,7 @@ class SolarProgressionApp:
          messagebox.showerror(
             "Calculation Error",
             str(error),
-            parent=self.root,
+            parent=self.root
          )
 
    #
@@ -1291,6 +1450,7 @@ class SolarProgressionApp:
    # The selected body/point is reflected throughout the report.
    #
 
+   # Display the calculation results in a child window.
    def show_results(
       self,
       start_local,
@@ -1299,7 +1459,7 @@ class SolarProgressionApp:
       origin_longitude,
       current_longitude,
       current_progress,
-      results,
+      results
    ):
       window = tk.Toplevel(self.root)
       window.title(
@@ -1317,12 +1477,12 @@ class SolarProgressionApp:
 
       frame = ttk.Frame(
          window,
-         padding=12,
+         padding=12
       )
       frame.grid(
          row=0,
          column=0,
-         sticky="nsew",
+         sticky="nsew"
       )
 
       summary = (
@@ -1344,14 +1504,14 @@ class SolarProgressionApp:
       ttk.Label(
          frame,
          text=summary,
-         justify="left",
+         justify="left"
       ).grid(
          row=0,
          column=0,
          columnspan=2,
          padx=4,
          pady=(0, 8),
-         sticky="w",
+         sticky="w"
       )
 
       columns = (
@@ -1360,7 +1520,7 @@ class SolarProgressionApp:
          "revolutions",
          "target_longitude",
          "alignment",
-         "body_position",
+         "body_position"
       )
 
       table = ttk.Treeview(
@@ -1369,74 +1529,74 @@ class SolarProgressionApp:
          show="headings",
          height=min(
             15,
-            max(3, len(results)),
-         ),
+            max(3, len(results))
+         )
       )
 
       table.heading(
          "degree",
-         text="Degree Increment",
+         text="Degree Increment"
       )
 
       table.heading(
          "offset",
-         text="Degree Offset",
+         text="Degree Offset"
       )
 
       table.heading(
          "revolutions",
-         text="Revolutions",
+         text="Revolutions"
       )
 
       table.heading(
          "target_longitude",
-         text=f"Target {body_name} Longitude",
+         text=f"Target {body_name} Longitude"
       )
 
       table.heading(
          "alignment",
-         text="Next Alignment",
+         text="Next Alignment"
       )
 
       table.heading(
          "body_position",
-         text=f"{body_name} Position",
+         text=f"{body_name} Position"
       )
 
       table.column(
          "degree",
          width=110,
-         anchor="center",
+         anchor="center"
       )
 
       table.column(
          "offset",
          width=105,
-         anchor="center",
+         anchor="center"
       )
 
       table.column(
          "revolutions",
          width=90,
-         anchor="center",
+         anchor="center"
       )
 
       table.column(
          "target_longitude",
          width=145,
-         anchor="center",
+         anchor="center"
       )
 
       table.column(
          "alignment",
          width=175,
-         anchor="center",
+         anchor="center"
       )
 
       table.column(
          "body_position",
          width=160,
-         anchor="center",
+         anchor="center"
       )
 
       for result in results:
@@ -1459,8 +1619,8 @@ class SolarProgressionApp:
                ),
                format_zodiac_position(
                   result["body_longitude"]
-               ),
-            ),
+               )
+            )
          )
 
       table.grid(
@@ -1469,19 +1629,19 @@ class SolarProgressionApp:
          columnspan=2,
          padx=4,
          pady=4,
-         sticky="nsew",
+         sticky="nsew"
       )
 
       scrollbar = ttk.Scrollbar(
          frame,
          orient="vertical",
-         command=table.yview,
+         command=table.yview
       )
 
       scrollbar.grid(
          row=1,
          column=2,
-         sticky="ns",
+         sticky="ns"
       )
 
       table.configure(
@@ -1540,7 +1700,7 @@ class SolarProgressionApp:
 
       frame.rowconfigure(
          1,
-         weight=1,
+         weight=1
       )
 
       #
@@ -1549,7 +1709,7 @@ class SolarProgressionApp:
 
       window.protocol(
          "WM_DELETE_WINDOW",
-         lambda: self.close_child(window),
+         lambda: self.close_child(window)
       )
 
       window.update_idletasks()
@@ -1561,6 +1721,7 @@ class SolarProgressionApp:
    # Close a child window and release its input grab.
    #
 
+   # Close a child window and release its input grab.
    def close_child(self, window):
       try:
          window.grab_release()
@@ -1574,12 +1735,9 @@ class SolarProgressionApp:
    # Export the displayed report, including the summary.
    #
 
+   # Export the displayed report as a text file.
    def export_text(
-      self,
-      table,
-      columns,
-      summary,
-      parent,
+      self, table, columns, summary, parent
    ):
       path = filedialog.asksaveasfilename(
          parent=parent,
@@ -1587,8 +1745,8 @@ class SolarProgressionApp:
          defaultextension=".txt",
          filetypes=[
             ("Text files", "*.txt"),
-            ("All files", "*.*"),
-         ],
+            ("All files", "*.*")
+         ]
       )
 
       if not path:
@@ -1602,13 +1760,13 @@ class SolarProgressionApp:
       lines = [
          summary,
          "",
-         "\t".join(headers),
+         "\t".join(headers)
       ]
 
       for item in table.get_children():
          values = table.item(
             item,
-            "values",
+            "values"
          )
 
          lines.append(
@@ -1623,7 +1781,7 @@ class SolarProgressionApp:
             path,
             "w",
             encoding="utf-8",
-            newline="",
+            newline=""
          ) as file:
             file.write(
                "\n".join(lines)
@@ -1632,7 +1790,7 @@ class SolarProgressionApp:
          messagebox.showinfo(
             "Export Complete",
             f"Results exported to:\n{path}",
-            parent=parent,
+            parent=parent
          )
 
       except OSError as error:
@@ -1646,6 +1804,7 @@ class SolarProgressionApp:
    # Clear the complete form.
    #
 
+   # Clear all input fields and degree selections.
    def clear(self):
       self.start_date_var.set("")
       self.current_date_var.set("")
@@ -1665,6 +1824,7 @@ class SolarProgressionApp:
 # Application entry point.
 #
 
+# Start the application.
 def main():
    root = tk.Tk()
    SolarProgressionApp(root)
