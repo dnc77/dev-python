@@ -1,3 +1,4 @@
+![Zodiac Progression](./astrodates.png)
 # Zodiac Progression Application Overview
 
 ## 1. Objective
