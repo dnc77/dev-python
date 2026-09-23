@@ -22,6 +22,8 @@ All work is provided ​“AS IS”. We make no other warranties, express or imp
 This was written in `Python` using version `3.14.4` and tested on Linux.
 Another version exists modified to work on `Windows 7` using `Python 3.8.2`.
 
+One can either build directly from the sources or just access the native binaries from the releases page (https://github.com/dnc77/dev-python/releases).
+
 ### Running using `Python`
 1. Install `Python`.
 2. Create a virtual environment: `python3 -m venv venv`.
